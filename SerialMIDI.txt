@@ -1,0 +1,162 @@
+Yamaha/Roland Serial MIDI
+=========================
+
+Port Settings
+-------------
+
+The general settings for the serial port are:
+
+- baud rate: 38400 bps
+- 8 bits per byte
+- 1 stop bit
+- no parity
+- CTS flow control: optional
+- RTS flow control: device-dependent
+- DTR/DSR/XON/XOFF flow control: off
+
+All Yamaha and Roland devices I tested so far work just fine with CTS control enabled.
+Yamaha devices do not need CTS/RTS flow control. The Yamaha driver disables CTS/RTS in general.
+Some Roland devices require RTS flow control. The Roland driver generally enables the RTS line.
+
+     device     |  CTS  |  RTS
+----------------+-------+-------
+Yamaha MU128    |   O   |   O
+Roland SC-88VL  |   O   |   O
+Roland SC-88Pro |   O   |   !
+Roland SC-8820  |   O   |   O
+
+O = optional
+! = required
+
+
+Serial protocol
+---------------
+The "protocol" is just the same raw MIDI data that is usually transferred over MIDI cables.
+
+However the serial protocol uses one special command, which is undefined according to the MIDI specification:
+
+command F5 ##: select part group
+	host -> device:
+		- ## = 00 -> group A (default)
+		- ## = 01 -> group A
+		- ## = 02 -> group B
+		- ## = 03 -> group C
+		- ## = 04 -> group D
+		Yes, values 00 and 01 are both going to the same group.
+	device -> host:
+		- Yamaha modules don't seem to use the F5 command for their outgoing data.
+		- Roland SC-88Pro regularly outputs "F5 00".
+		- Roland SC-8820 outputs "F5 05" for data forwarded from the MIDI In port.
+		- Neither Roland nor Yamaha seem to indicate the difference between "MIDI Out" and "MIDI Through" data.
+
+
+
+Detailed settings used by Serial MIDI drivers
+=============================================
+
+I disassembled the official Yamaha and Roland MIDI drivers and extracted the Serial port settings from them.
+
+Drivers analyzed:
+- YAMAHA CBX Driver v2.00 (Windows NT version)
+- Roland Serial MIDI Driver v3.2 (Windows NT version)
+
+
+Yamaha Serial Settings
+----------------------
+from CBXT3USR.dll
+
+DCB cState;
+cState.DCBlength = 28;
+cState.BaudRate = 38400;
+//cState.flags = 0x0001;	// fBinary = 1; others = 0
+	cState.fBinary = 1;
+	cState.fParity = 0;
+	cState.fOutxCtsFlow = 0;
+	cState.fOutxDsrFlow = 0;
+	cState.fDtrControl = 0;
+	cState.fDsrSensitivity = 0;
+	cState.fTXContinueOnXoff = 0;
+	cState.fOutX = 0;
+	cState.fInX = 0;
+	cState.fErrorChar = 0;
+	cState.fNull = 0;
+	cState.fRtsControl = 0;
+	cState.fAbortOnError = 0;
+	cState.fDummy2 = 0;
+cState.wReserved = 0;
+cState.XonLim = 0;
+cState.XoffLim = 0;
+cState.ByteSize = 8;
+cState.Parity = 0;	// NOPARITY
+cState.StopBits = 0;	// 1 stop bit
+cState.XonChar = 0;
+cState.XoffChar = 0;
+cState.ErrorChar = 0;
+cState.EofChar = 0;
+cState.EvtChar = 0;
+cState.wReserved1 = 0;
+commSetDCB(&cState);	// set stuff from registry
+	cState.flags &= 0x8FF7;
+	cState.XonLim = 0;
+	cState.XoffLim = 512;
+	cState.XonChar = 0;
+	cState.XoffChar = 0;
+	// then set variables from registry values:
+	//cState.fOutxCtsFlow
+	//cState.fRtsControl
+	//cState.fAbortOnError
+	//cState.XonLim
+	//cState.XoffLim
+	//cState.XonChar
+	//cState.XoffChar
+SetCommState(hFile; &cState);
+
+Note: Even though the driver disables CTS/RTS flow control by default, the Yamaha MU128 works just with it enabled.
+
+
+Roland Serial Settings
+----------------------
+from RDSMIDNT.EXE
+
+Note: # = keep previous setting unchanged
+
+DCB cState;
+cState.DCBlength = 28;
+cState.BaudRate = 38400;
+	cState.fBinary = 1;
+	cState.fParity = #;
+	cState.fOutxCtsFlow = [0, 1];	// 1 when "CTS/RTS" option is on
+	cState.fOutxDsrFlow = 0;
+	cState.fDtrControl = 0;	// DTR_CONTROL_DISABLE
+	cState.fDsrSensitivity = 0;
+	cState.fTXContinueOnXoff = #;
+	cState.fOutX = 0;
+	cState.fInX = 0;
+	cState.fErrorChar = #;
+	cState.fNull = #;
+	cState.fRtsControl = [1, 2];	// 2 when "CTS/RTS" option is on, 1 = RTS line always enabled, 2 = RTS handshake
+	cState.fAbortOnError = #;
+	cState.fDummy2 = #;
+cState.wReserved = #;
+cState.XonLim = #;
+cState.XoffLim = #;
+cState.ByteSize = 8;
+cState.Parity = 0;	// NOPARITY
+cState.StopBits = 0;	// 1 stop bit
+cState.XonChar = #;
+cState.XoffChar = #;
+cState.ErrorChar = #;
+cState.EofChar = #;
+cState.EvtChar = #;
+cState.wReserved1 = #;
+
+Roland modules that require RTS will stop accepting data after a short amount of time.
+They are trying to send out MIDI "Active Sensing" messages (FE)
+and when the transmit buffer is full, they will hang, waiting for the RTS line to be enabled.
+
+CTS flow control isn't required, but was supported by all devices I tested.
+
+RTS enable required:
+- SC-88VL: no
+- SC-88Pro: yes
+- SC-8820: no
