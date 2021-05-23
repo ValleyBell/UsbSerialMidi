@@ -2,9 +2,11 @@
 // Valley Bell, 2021-02-27
 
 // Tested successfully with:
-//	- Roland SC-88VL (2 Ports)
-//	- Roland SC-88Pro (2 Ports)
-//	- Yamaha MU128 (4 Ports)
+//	- Roland SC-88VL (2 Ports: A, B)
+//	- Roland SC-88Pro (2 Ports. A, B)
+//	- Roland SC-8820 (2 Ports. A, B)
+//	- Yamaha MU128 (4 Ports: A, B, C, D)
+//	- Korg NS5R (3 Ports: MIDI Out, A, B)
 
 #include <stdint.h>
 #include "USBMultiMIDI.hpp"

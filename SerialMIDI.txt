@@ -1,8 +1,8 @@
-Yamaha/Roland Serial MIDI
-=========================
+Yamaha/Roland/Korg Serial MIDI
+==============================
 
-Port Settings
--------------
+Serial Port Settings
+--------------------
 
 The general settings for the serial port are:
 
@@ -17,6 +17,8 @@ The general settings for the serial port are:
 All Yamaha and Roland devices I tested so far work just fine with CTS control enabled.
 Yamaha devices do not need CTS/RTS flow control. The Yamaha driver disables CTS/RTS in general.
 Some Roland devices require RTS flow control. The Roland driver generally enables the RTS line.
+The Korg AG-001B cable has CTS and RTS connected with each other on the PC side. The Korg driver disables CTS/RTS.
+CTS/RTS is not working on the Korg NS5R and trying to use a Yamaha/Roland cable with it causes Windows to freeze when opening the COM port.
 
      device     |  CTS  |  RTS
 ----------------+-------+-------
@@ -24,9 +26,11 @@ Yamaha MU128    |   O   |   O
 Roland SC-88VL  |   O   |   O
 Roland SC-88Pro |   O   |   !
 Roland SC-8820  |   O   |   O
+Korg NS5R       |   X   |   X
 
 O = optional
 ! = required
+X = broken / don't use
 
 
 Serial protocol
@@ -49,6 +53,29 @@ command F5 ##: select part group
 		- Roland SC-8820 outputs "F5 05" for data forwarded from the MIDI In port.
 		- Neither Roland nor Yamaha seem to indicate the difference between "MIDI Out" and "MIDI Through" data.
 
+The Korg NS5R manual describes additional behaviour:
+	host -> device:
+		- F5 00 -> group assignment according to "MIDI ch To Port" settings on the device
+		- F5 01 -> to MIDI Out
+		- F5 02 -> group A
+		- F5 03 -> group B
+		- F5 F5 -> transmit F5 byte
+		- F5 FF -> transmit FF byte
+		- FF -> no operation
+
+
+Port Map
+--------
+     device     |  F5 00  |  F5 01  |  F5 02  |  F5 03  |  F5 04  |  F5 05  |  F5 06  |  F5 07  
+----------------+---------+---------+---------+---------+---------+---------+---------+---------
+Yamaha MU128    | A + Out | A + Out | Part B  | Part C  | Part D  | ---     | ---     | ---     
+Roland SC-88VL  | A + Out | A + Out | B + Out | B + Out | B + Out | B + Out | B + Out | B + Out 
+Roland SC-88Pro | A + Out | A + Out | B + Out | B + Out | B + Out | B + Out | B + Out | B + Out 
+Roland SC-8820  | Part A  | Part A  | Part B  | ---     | ---     | MIDI Out| ---     | ---     
+Korg NS5R       | dev-cfg | MIDI Out| Part A  | Part B  | dev-cfg | dev-cfg | dev-cfg | dev-cfg 
+
+--- = following MIDI data is discarded
+dev-cfg = Korg NS5R: per-channel routing according to "MIDI ch To Port" device settings
 
 
 Detailed settings used by Serial MIDI drivers
@@ -59,6 +86,7 @@ I disassembled the official Yamaha and Roland MIDI drivers and extracted the Ser
 Drivers analyzed:
 - YAMAHA CBX Driver v2.00 (Windows NT version)
 - Roland Serial MIDI Driver v3.2 (Windows NT version)
+- KORG PC I/F MIDI Driver for Windows NT v1.31
 
 
 Yamaha Serial Settings
@@ -160,3 +188,28 @@ RTS enable required:
 - SC-88VL: no
 - SC-88Pro: yes
 - SC-8820: no
+
+
+Korg Serial Settings
+--------------------
+from KORGSMDN.DRV
+
+The driver defines the DCB struct using
+	BuildCommDCB("baud=38400 parity=N data=8 stop=1", &cState);
+
+This results in:
+cState.BaudRate = 38400;
+	cState.fParity = 0;
+	cState.fOutxCtsFlow = 0;
+	cState.fOutxDsrFlow = 0;
+	cState.fDtrControl = 0;
+	cState.fDsrSensitivity = 0;
+	cState.fTXContinueOnXoff = 0;
+	cState.fOutX = 0;
+	cState.fInX = 0;
+	cState.fRtsControl = 0;
+cState.ByteSize = 8;
+cState.Parity = 0;	// NOPARITY
+cState.StopBits = 0;	// 1 stop bit
+
+The Korg NS5R doesn't support flow control.
