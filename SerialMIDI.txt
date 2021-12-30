@@ -23,6 +23,7 @@ CTS/RTS is not working on the Korg NS5R and trying to use a Yamaha/Roland cable 
      device     |  CTS  |  RTS
 ----------------+-------+-------
 Yamaha MU128    |   O   |   O
+Roland SC-55mkII|   O   |   O
 Roland SC-88VL  |   O   |   O
 Roland SC-88Pro |   O   |   !
 Roland SC-8820  |   O   |   O
@@ -69,6 +70,7 @@ Port Map
      device     |  F5 00  |  F5 01  |  F5 02  |  F5 03  |  F5 04  |  F5 05  |  F5 06  |  F5 07  
 ----------------+---------+---------+---------+---------+---------+---------+---------+---------
 Yamaha MU128    | A + Out | A + Out | Part B  | Part C  | Part D  | ---     | ---     | ---     
+Roland SC-55mkII| A + Out | A + Out | A + Out | A + Out | A + Out | A + Out | A + Out | A + Out 
 Roland SC-88VL  | A + Out | A + Out | B + Out | B + Out | B + Out | B + Out | B + Out | B + Out 
 Roland SC-88Pro | A + Out | A + Out | B + Out | B + Out | B + Out | B + Out | B + Out | B + Out 
 Roland SC-8820  | Part A  | Part A  | Part B  | ---     | ---     | MIDI Out| ---     | ---     
@@ -182,9 +184,10 @@ Roland modules that require RTS will stop accepting data after a short amount of
 They are trying to send out MIDI "Active Sensing" messages (FE)
 and when the transmit buffer is full, they will hang, waiting for the RTS line to be enabled.
 
-CTS flow control isn't required, but was supported by all devices I tested.
+CTS flow control isn't required, but all devices I tested kept working when enabling it.
 
 RTS enable required:
+- SC-55mkII: no
 - SC-88VL: no
 - SC-88Pro: yes
 - SC-8820: no
