@@ -127,8 +127,8 @@ typedef struct	// MIDI OUT Jack Descriptor (USB MIDI Spec. 1.0: Table 6-4)
 	uint8_t bJackType;			// EMBEDDED or EXTERNAL
 	uint8_t bJackID;			// Constant uniquely identifying the MIDI OUT Jack within the USB-MIDI function.
 	uint8_t bNrInputPins;		// Number of Input Pins of this MIDI OUT Jack: p
-//	uint8_t baSourceID[1];		// ID of the Entity to which the last Input Pin of this MIDI OUT Jack is connected.
-//	uint8_t baSourcePin[1];		// Output Pin number of the Entity to which the last Input Pin of this MIDI OUT Jack is connected.
+	uint8_t baSourceID[1];		// ID of the Entity to which the last Input Pin of this MIDI OUT Jack is connected.
+	uint8_t baSourcePin[1];		// Output Pin number of the Entity to which the last Input Pin of this MIDI OUT Jack is connected.
 	uint8_t iJack;				// Index of a string descriptor, describing the MIDI OUT Jack.
 } MIDIJackOutDescriptor;
 
@@ -181,7 +181,7 @@ typedef struct	// Class-specific MS Bulk Data Endpoint Descriptor [for MIDI Jack
 #define D_MIDI_INJACK(jackProp, jackID) \
 	{ 0x06, MS_CS_INTERFACE, MS_IDS_IN_JACK, jackProp, jackID, 0 }
 #define D_MIDI_OUTJACK(jackProp, jackID) \
-	{ 0x07, MS_CS_INTERFACE, MS_IDS_OUT_JACK, jackProp, jackID, 0, 0 }
+	{ 0x09, MS_CS_INTERFACE, MS_IDS_OUT_JACK, jackProp, jackID, 1, 1, 1, 0 }
 #define D_MIDI_JACK_EP(addr, attr, packetSize) \
 	{ 0x09, 5, addr, attr, packetSize, 0, 0, 0 }
 #define D_MIDI_AC_JACK_EP() \
